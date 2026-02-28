@@ -8,6 +8,7 @@ from .serializers import GoldPriceSerializer
 from .utils import scrape_gold_prices
 
 class LatestGoldPricesView(APIView):
+    
     def get(self, request):
         # Define cache key
         cache_key = 'latest_gold_prices'
