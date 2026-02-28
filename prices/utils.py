@@ -13,7 +13,7 @@ def scrape_gold_prices():
 
     try:
         # Fetch HTML content
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=10)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         # Select the ul tags inside the table container
