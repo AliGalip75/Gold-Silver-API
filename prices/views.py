@@ -5,55 +5,62 @@ from django.utils import timezone
 from django.db import DatabaseError
 from datetime import timedelta
 from .models import GoldPrice
-from .serializers import GoldPriceSerializer
+# Serializer'ı artık manuel oluşturacağımız için import etmemize gerek yok
 from .utils import scrape_gold_prices
 
 class LatestGoldPricesView(APIView):
     
     def get(self, request):
-        # Define cache key
-        cache_key = 'latest_gold_prices'
+        cache_key = 'latest_gold_prices_with_trend'
         cached_data = cache.get(cache_key)
 
-        # Return cached data if it exists
         if cached_data:
             return Response(cached_data)
 
         try:
-            # Check latest record in database (This is where Neon DB cold start happens)
             latest_record = GoldPrice.objects.order_by('-created_at').first()
             
-            # Scrape new data if database is empty or data is older than 1 hour
             if not latest_record or latest_record.created_at < timezone.now() - timedelta(hours=1):
                 scrape_gold_prices()
             
-            # Get latest price for each gold type
             gold_types = ['gram', 'ceyrek', 'yarim', 'tam', 'gumus']
-            latest_prices = []
+            enriched_data = []
             
             for g_type in gold_types:
-                obj = GoldPrice.objects.filter(gold_type=g_type).order_by('-created_at').first()
-                if obj:
-                    latest_prices.append(obj)
+                # Get the last TWO records for this gold type
+                records = list(GoldPrice.objects.filter(gold_type=g_type).order_by('-created_at')[:2])
+                
+                if not records:
+                    continue
+                    
+                latest = records[0]
+                # If there's a previous record, use it; otherwise, default to None
+                previous = records[1] if len(records) > 1 else None
+                
+                # Build custom dictionary
+                item_data = {
+                    "id": latest.id,
+                    "gold_type": latest.gold_type,
+                    "price_buy": str(latest.price_buy),
+                    "price_sell": str(latest.price_sell),
+                    "created_at": latest.created_at,
+                    # Add previous prices for the app to calculate trends
+                    "previous_price_buy": str(previous.price_buy) if previous else None,
+                    "previous_price_sell": str(previous.price_sell) if previous else None,
+                }
+                enriched_data.append(item_data)
 
-            # Serialize data
-            serializer = GoldPriceSerializer(latest_prices, many=True)
-            data = serializer.data
+            cache.set(cache_key, enriched_data, timeout=3600)
 
-            # Store in RAM cache for 1 hour (3600 seconds)
-            cache.set(cache_key, data, timeout=3600)
-
-            return Response(data)
+            return Response(enriched_data)
 
         except DatabaseError as e:
-            # Catch Neon DB wake-up timeouts and prevent server lockup
             print(f"Database Error (Probably waking up): {e}")
             return Response(
                 {"error": "Veritabanı uykudan uyanıyor, lütfen 15-20 saniye sonra tekrar deneyin."}, 
                 status=503
             )
         except Exception as e:
-            # Catch any other unexpected errors
             print(f"Unexpected Error: {e}")
             return Response(
                 {"error": "Sunucu tarafında geçici bir hata oluştu."}, 
