@@ -17,15 +17,15 @@ export const PriceList = () => {
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
-    
+
     try {
       const result = await refetch();
-      
+
       // Eğer backend bizim 503 hata mesajımızı döndürdüyse (uyanma durumu)
       if (result.isError) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
-          "Sunucular Uyanıyor", 
+          "Sunucular Uyanıyor",
           "Sistem uzun süre işlem yapılmadığı için uyku modundaydı. Arka planda uyandırılıyor, lütfen 15-20 saniye sonra tekrar yenileyin."
         );
       } else {
@@ -52,7 +52,7 @@ export const PriceList = () => {
             Saatlik güncellenen fiyatlar
           </Text>
         </View>
-        
+
         {/* 6 tane nefes alan iskelet kartı alt alta diziyoruz */}
         {[1, 2, 3, 4, 5, 6].map((key) => (
           <SkeletonPriceCard key={key} />
@@ -65,10 +65,10 @@ export const PriceList = () => {
   if (isError && (!prices || prices.length === 0)) {
     return (
       <View className="flex-1 items-center justify-center p-4 bg-background">
-        <Text className="text-red-500 text-center font-semibold mb-4">
+        <Text className="text-red-500 text-center mb-4">
           Sunuculara bağlanılamadı.
         </Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => refetch()}
           className="bg-primary px-6 py-2 rounded-full"
         >
@@ -80,7 +80,7 @@ export const PriceList = () => {
 
   return (
     <View className="flex-1 bg-background px-4 pt-4">
-      
+
       <FlashList
         data={prices || []}
         renderItem={({ item, index }: { item: GoldPrice; index: number }) => (
@@ -94,7 +94,7 @@ export const PriceList = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={theme.light.primary} 
+            tintColor={theme.light.primary}
             colors={[theme.light.primary]}
           />
         }
@@ -106,7 +106,7 @@ export const PriceList = () => {
             <Text className="text-text-secondary mt-1 mb-4">
               Saatlik güncellenen fiyatlar
             </Text>
-            
+
             {/* AdMob Banner inside the list header */}
             <View className="items-center justify-center py-2 rounded-xl overflow-hidden min-h-[60px] w-full">
               <BannerAd
@@ -120,7 +120,7 @@ export const PriceList = () => {
           </View>
         }
       />
-      
+
     </View>
   );
 };

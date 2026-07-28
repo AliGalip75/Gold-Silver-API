@@ -91,8 +91,13 @@ from urllib.parse import urlparse, parse_qsl
 
 load_dotenv()
 
-# Replace the DATABASES section of your settings.py with this
 tmpPostgres = urlparse(os.getenv("DATABASE_URL", ""))
+
+# Extract queries from DATABASE_URL
+db_options = dict(parse_qsl(tmpPostgres.query))
+
+# Set connect_timeout so Django waits for Neon to wake up (15 seconds)
+db_options['connect_timeout'] = 15
 
 DATABASES = {
     'default': {
@@ -101,8 +106,10 @@ DATABASES = {
         'USER': tmpPostgres.username,
         'PASSWORD': tmpPostgres.password,
         'HOST': tmpPostgres.hostname,
-        'PORT': 5432,
-        'OPTIONS': dict(parse_qsl(tmpPostgres.query)),
+        'PORT': tmpPostgres.port or 5432,
+        'CONN_MAX_AGE': 600,  # Keep connections alive for 10 minutes
+        'CONN_HEALTH_CHECKS': True,  # Test connection health before re-using
+        'OPTIONS': db_options,
     }
 }
 
